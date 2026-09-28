@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="de" data-theme="sunlight">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#ffffff">
+    <title>ReaktRailAi</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="viewer">
+      <video id="stream" autoplay playsinline muted aria-label="Annotierter ReaktRailAi-Videostream"></video>
+      <div class="shade"></div>
+
+      <section class="overlay-legend" aria-labelledby="overlayLegendTitle">
+        <p id="overlayLegendTitle" class="overlay-legend__title">Bildlegende</p>
+        <ul class="legend legend--overlay">
+          <li><span class="legend__color legend__color--danger"></span><span>Objekt auf dem Gleis</span></li>
+          <li><span class="legend__color legend__color--clear"></span><span>Objekt außerhalb des Gleises</span></li>
+          <li><span class="legend__color legend__color--rail"></span><span>Erkannter Gleisbereich</span></li>
+          <li><span class="legend__color legend__color--anomaly"></span><span>Potenziell blockierter Gleisbereich</span></li>
+        </ul>
+      </section>
+
+      <div class="reakt-logo">
+        <img src="/assets/reakt-logo.svg" alt="REAKT">
+      </div>
+
+      <button id="infoButton" class="info-button" type="button" aria-label="Informationen anzeigen" aria-expanded="false">
+        i
+      </button>
+
+      <aside id="infoPanel" class="info-panel" aria-hidden="true" inert>
+        <div class="info-panel__header">
+          <h1>ReaktRailAi</h1>
+          <button id="closeButton" class="close-button" type="button" aria-label="Informationen schließen">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6 18 18 M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <section class="panel-section panel-section--history">
+          <h2>Entstehungsgeschichte</h2>
+          <div class="prose">
+            <p>
+              ReaktRailAi entstand im Rahmen des REAKTOR-Projekts innerhalb der REAKT-Initiative. Ziel ist
+              es, stillgelegte eingleisige Strecken mithilfe autonomer Schienenfahrzeuge wieder nutzbar zu machen.
+              Die Fahrzeuge sollen sich unterwegs miteinander kuppeln können, sodass Fahrgäste zwischen ihnen
+              wechseln können. Dadurch soll auf eingleisigen Strecken Personenverkehr in beide Richtungen
+              gleichzeitig ermöglicht werden.
+            </p>
+            <p>
+              Für einen wirtschaftlichen Betrieb müssen die Schienenfahrzeuge autonom fahren können. Damit sie
+              während der Fahrt Kollisionen vermeiden, benötigen sie eine automatische Hinderniserkennung. Ein
+              erster Ansatz dafür wurde im Rahmen einer Bachelorarbeit im Kontext der REAKT-Initiative entwickelt. In einem
+              anschließenden Masterprojekt wurde das System weiterentwickelt und für eine anschauliche Demonstration
+              aufbereitet. Das Ergebnis kann auf dieser Seite betrachtet werden.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>So funktioniert ReaktRailAi</h2>
+          <div class="prose">
+            <p>
+              Die hier eingesetzte KI-Pipeline basiert im Kern auf einem YOLO26m-Modell, das auf einem NVIDIA Jetson
+              Orin NX mit 16 GB Arbeitsspeicher ausgeführt wird. Als Eingabe erhält das System ausschließlich den
+              Videostream einer einzelnen Kamera an der Fahrzeugfront. Das Kamerabild wird über das Netzwerk an den
+              Jetson übertragen und dort vom KI-Modell verarbeitet.
+            </p>
+            <p>
+              Das Modell erkennt gleichzeitig den Gleisbereich und sichtbare Objekte, die im Training vorkamen oder
+              den gelernten Merkmalen ähneln. Der Prozentwert neben einem Objekt gibt an, wie sicher das Modell ist,
+              dass das Objekt zur angezeigten Klasse gehört. Anschließend wird geometrisch geprüft, ob sich ein
+              erkanntes Objekt innerhalb der Fahrspur oder daneben befindet.
+            </p>
+            <p>
+              Damit das System auch auf unbekannte Objekte reagieren kann, lässt sich zusätzlich die Gleismaske auf
+              Auffälligkeiten untersuchen. Fehlt innerhalb eines ansonsten zusammenhängend erkannten Gleisbereichs
+              plötzlich ein Teil der Maske, kann dies auf eine Verdeckung und damit auf ein mögliches Hindernis
+              hinweisen. Aus diesen Auswertungen kann später beispielsweise abgeleitet werden, ob eine autonome
+              Bremsung erforderlich ist.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Grenzen des Systems</h2>
+          <div class="prose">
+            <p>
+              Eine wesentliche Einschränkung ist, dass ausschließlich auf Sicht gefahren werden kann. Der Bremsweg
+              darf deshalb niemals länger als der einsehbare Streckenabschnitt sein. Zudem fehlt derzeit eine
+              unabhängige Redundanz, beispielsweise eine lidarbasierte Hinderniserkennung, mit der sich die Ergebnisse
+              zusätzlich absichern ließen.
+            </p>
+            <p>
+              Auch Witterung und Lichtverhältnisse können die Erkennung beeinträchtigen. Das gilt insbesondere bei
+              Regen, Nebel, Schnee, Dunkelheit oder tief stehender Sonne, wenn die Sicht der Kamera eingeschränkt ist.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Vorteile des Ansatzes</h2>
+          <div class="prose">
+            <p>
+              Der größte Vorteil sind die vergleichsweise geringen Hardwarekosten, da das System mit einer Kamera und
+              einer kompakten Recheneinheit auskommt. Gleichzeitig liefert das Kamerabild viele Informationen: Das
+              Modell kann nicht nur ein Hindernis erkennen, sondern auch dessen Objektklasse bestimmen.
+            </p>
+            <p>
+              Der Ansatz lässt sich außerdem vergleichsweise einfach nachrüsten, durch Softwareupdates erweitern und
+              anhand aufgezeichneter Videos nachvollziehen. Diese Aufnahmen können zugleich genutzt werden, um das
+              Modell gezielt zu prüfen und weiterzuentwickeln.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Extrawerte</h2>
+          <dl class="metrics metrics--primary">
+            <div><dt>Stream</dt><dd id="streamStatus" aria-live="polite">Verbindung wird aufgebaut …</dd></div>
+            <div><dt>Framerate</dt><dd id="fps">–</dd></div>
+            <div><dt>Pipeline-Latenz</dt><dd id="latency">–</dd></div>
+          </dl>
+        </section>
+
+        <div id="technicalInfo" class="technical-info" hidden>
+          <section class="panel-section">
+            <h2>Modell</h2>
+            <div id="models" class="model-list"></div>
+          </section>
+
+          <section class="panel-section">
+            <h2>Technische Details</h2>
+            <dl class="metrics">
+              <div><dt>Plattform</dt><dd id="platform">–</dd></div>
+              <div><dt>Gerät</dt><dd id="device">–</dd></div>
+              <div><dt>Präzision</dt><dd id="precision">–</dd></div>
+              <div><dt>Provider</dt><dd id="provider">–</dd></div>
+              <div><dt>Decoder</dt><dd id="decoder">–</dd></div>
+              <div><dt>Encoder</dt><dd id="encoder">–</dd></div>
+              <div><dt>Release</dt><dd id="release">–</dd></div>
+            </dl>
+          </section>
+        </div>
+
+        <section class="panel-section panel-section--contacts" aria-labelledby="contactsTitle">
+          <h2 id="contactsTitle">Kontaktpersonen</h2>
+          <div class="contact-list">
+            <article class="contact-card">
+              <h3>Lorenz Tiedemann</h3>
+              <p>stu228346@mail.uni-kiel.de</p>
+            </article>
+            <article class="contact-card">
+              <h3>Prof. Dr. Reinhard von Hanxleden</h3>
+              <p>rvh@informatik.uni-kiel.de</p>
+            </article>
+          </div>
+          <div class="github-contact">
+            <div class="github-qr">
+              <img src="/assets/github-qr.svg" width="164" height="164" alt="QR-Code zum GitHub-Repository von ReaktRailAi">
+            </div>
+            <div class="github-contact__copy">
+              <strong>GitHub-Repository</strong>
+              <span>reakt-sh/ai-obstacle-detection</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <script src="/config.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

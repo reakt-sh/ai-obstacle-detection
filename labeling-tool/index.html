@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReaktRailAi – Maskenprüfung</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>ReaktRailAi – Maskenprüfung</h1>
+      <p id="progressText">Dataset wird geladen …</p>
+    </div>
+    <div class="header-actions">
+      <button id="saveButton" class="primary">Speichern</button>
+      <a class="button" href="/api/export">Geprüfte Labels exportieren</a>
+    </div>
+  </header>
+
+  <main>
+    <aside class="sidebar">
+      <div class="filters">
+        <label>Filter
+          <select id="filterSelect">
+            <option value="all">Aktueller Stapel</option>
+            <option value="unreviewed">Nur ungeprüfte</option>
+            <option value="switch">Weichenszene</option>
+            <option value="short_object">Kurze Objekterkennung</option>
+            <option value="rail_hard">Auffällige Gleismaske</option>
+            <option value="reviewed">Geprüft und übernommen</option>
+            <option value="excluded">Verworfen</option>
+            <option value="deferred">Zurückgestellt</option>
+          </select>
+        </label>
+      </div>
+      <div id="candidateList" class="candidate-list"></div>
+    </aside>
+
+    <section class="workspace">
+      <div class="toolbar">
+        <button id="previousButton" title="Pfeil links">← Zurück</button>
+        <button id="nextButton" title="Pfeil rechts">Weiter →</button>
+        <button id="nextUnreviewedButton">Nächster ungeprüfter</button>
+        <span class="separator"></span>
+        <button id="fitButton" title="F">Ansicht einpassen</button>
+        <button id="newPolygonButton" title="N">Neue Maske</button>
+        <button id="mergeMasksButton" title="M">Masken verbinden</button>
+        <button id="copyMaskButton" title="Strg+C">Maske kopieren</button>
+        <button id="pasteMaskButton" title="Strg+V">Maske einfügen</button>
+        <button id="deleteInstanceButton" class="danger" title="Entf">Maske löschen</button>
+        <button id="undoButton" title="Strg+Z">Rückgängig</button>
+        <button id="redoButton" title="Strg+Y">Wiederholen</button>
+        <label class="inline">Deckkraft <input id="opacityInput" type="range" min="0" max="0.8" value="0.28" step="0.02"></label>
+        <label class="inline"><input id="verticesInput" type="checkbox" checked> Eckpunkte</label>
+        <label class="inline"><input id="labelsInput" type="checkbox" checked> Namen</label>
+      </div>
+
+      <div id="canvasShell" class="canvas-shell">
+        <canvas id="canvas"></canvas>
+        <div id="canvasHint" class="canvas-hint hidden"></div>
+      </div>
+
+      <div class="bottom-bar">
+        <div id="frameMeta" class="frame-meta"></div>
+        <div class="review-actions">
+          <button id="acceptButton" class="success" title="R">Geprüft & übernehmen</button>
+          <button id="excludeButton" class="danger" title="X">Frame verwerfen</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <section>
+        <h2>Auswahl</h2>
+        <div id="noSelection">Keine Maske ausgewählt.</div>
+        <div id="selectionEditor" class="hidden">
+          <label>Klasse
+            <select id="classSelect"></select>
+          </label>
+          <dl>
+            <dt>Quelle</dt><dd id="instanceSource">–</dd>
+            <dt>Confidence</dt><dd id="instanceConfidence">–</dd>
+            <dt>Eckpunkte</dt><dd id="instanceVertices">–</dd>
+          </dl>
+          <p class="help">Eckpunkte ziehen. Doppelklick auf eine Kante fügt einen Punkt ein. Rechtsklick auf einen Eckpunkt entfernt ihn. „Masken verbinden“ wählen und anschließend die zweite Maske anklicken.</p>
+        </div>
+        <div class="instance-picker">
+          <div class="instance-picker__header">
+            <h3>Masken in diesem Frame</h3>
+            <label class="inline"><input id="selectionLockInput" type="checkbox"> Auswahl sperren</label>
+          </div>
+          <div id="instanceList" class="instance-list"></div>
+          <p class="help">Hier lassen sich auch vollständig übereinanderliegende Masken eindeutig auswählen. Eine gesperrte Auswahl wird durch Klicks ins Bild nicht gewechselt.</p>
+        </div>
+      </section>
+      <section>
+        <h2>Auswahlgrund</h2>
+        <div id="reasonList" class="reason-list"></div>
+      </section>
+      <section>
+        <h2>Notizen</h2>
+        <textarea id="notesInput" rows="6" placeholder="Optionaler Hinweis zu diesem Frame"></textarea>
+      </section>
+      <section class="help keyboard-help">
+        <h2>Kurzbefehle</h2>
+        <p>Fehlalarm: Falsche Maske löschen und danach „Geprüft &amp; übernehmen“ wählen. „Frame verwerfen“ schließt das ganze Bild aus dem Training aus. Echte Objekte und Gleismasken ebenfalls prüfen.</p>
+        <p><kbd>←</kbd>/<kbd>→</kbd> Frame · <kbd>N</kbd> neue Maske · <kbd>M</kbd> Masken verbinden · <kbd>Strg+C</kbd>/<kbd>Strg+V</kbd> Maske kopieren/einfügen · <kbd>Entf</kbd> löschen · <kbd>R</kbd> übernehmen · <kbd>X</kbd> verwerfen · <kbd>F</kbd> einpassen · <kbd>Strg+S</kbd> speichern · Mausrad zoomen</p>
+      </section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

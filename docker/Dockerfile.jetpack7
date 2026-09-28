@@ -1,0 +1,89 @@
+FROM bluenviron/mediamtx:1.19.1 AS mediamtx
+#26.05 might work aswell
+#Tested on Nvidia Jetson Origin NX 16GB
+FROM nvcr.io/nvidia/pytorch:26.02-py3-igpu@sha256:d1a026a2b28de6ef6404334ca78b7b761434f10d370ad2130b37aafb6e68eb17
+
+ARG RAIL_AI_RELEASE=2026-09-13-github-jetson-release
+ARG JETPACK_APT_RELEASE=r39.2
+ARG TENSORRT_DEB_VERSION=10.16.2.10-1+cuda13.2
+
+LABEL org.opencontainers.image.title="ReaktRailAi - JetPack 7" \
+      org.opencontainers.image.version="${RAIL_AI_RELEASE}" \
+      org.opencontainers.image.description="ReaktRailAi runtime for JetPack 7 / Jetson Linux R39"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    YOLO_AUTOINSTALL=false \
+    YOLO_CONFIG_DIR=/opt/ultralytics \
+    PYTHONPATH=/app/src \
+    RAIL_AI_PLATFORM=jetson \
+    RAIL_AI_RELEASE=${RAIL_AI_RELEASE} \
+    MODEL=/app/model/reaktrailai-yolo26m-seg.pt \
+    EXPORT_DIR=/models/exports
+
+WORKDIR /app
+
+RUN test "$(dpkg --print-architecture)" = "arm64" \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        ffmpeg \
+        gstreamer1.0-libav \
+        gstreamer1.0-plugins-bad \
+        gstreamer1.0-plugins-base \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-ugly \
+        gstreamer1.0-tools \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+        tini \
+    && mkdir -p /opt/ultralytics \
+    && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /opt/ultralytics/Arial.ttf \
+    && rm -rf /var/lib/apt/lists/*
+
+#Versions proposed by Codex (it works)
+RUN python3 -c "import torch; print(torch.__version__)" > /tmp/nvidia-pytorch-version \
+    && curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc \
+        -o /etc/apt/trusted.gpg.d/jetson-ota-public.asc \
+    && echo "576f852981855e5c6cfb9b625ffb51b984ca451f1181b2e70435b005034fad55  /etc/apt/trusted.gpg.d/jetson-ota-public.asc" | sha256sum -c - \
+    && echo "deb https://repo.download.nvidia.com/jetson/common ${JETPACK_APT_RELEASE} main" \
+        > /etc/apt/sources.list.d/nvidia-jetpack.list \
+    && apt-get update \
+    && python3 -m pip uninstall --yes tensorrt \
+    && apt-get install -y --no-install-recommends \
+        "tensorrt=${TENSORRT_DEB_VERSION}" \
+        "python3-libnvinfer=${TENSORRT_DEB_VERSION}" \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements/jetpack7.txt /tmp/requirements-jetpack7.txt
+COPY tools/patch_ultralytics_tensorrt.py /tmp/patch-ultralytics-tensorrt.py
+RUN test "${PIP_CONSTRAINT}" = "/etc/pip/constraint.txt" \
+    && test -f "${PIP_CONSTRAINT}" \
+    && python3 -m pip install --no-cache-dir -r /tmp/requirements-jetpack7.txt \
+    && python3 /tmp/patch-ultralytics-tensorrt.py \
+    && rm /tmp/patch-ultralytics-tensorrt.py \
+    && python3 -c "from importlib import metadata; from pathlib import Path; import cv2, onnxruntime, tensorrt as trt, torch, ultralytics; expected = Path('/tmp/nvidia-pytorch-version').read_text().strip(); assert torch.__version__ == expected, f'NVIDIA PyTorch was changed by dependency installation: {torch.__version__} != {expected}'; assert trt.__version__ == '10.16.2.10', f'Unexpected JetPack 7.2 TensorRT: {trt.__version__}'; cv2_packages = sorted((dist.metadata['Name'].lower(), dist.version) for dist in metadata.distributions() if dist.metadata['Name'] and dist.metadata['Name'].lower() in {'opencv-python', 'opencv-python-headless', 'opencv-contrib-python', 'opencv-contrib-python-headless'}); assert cv2_packages == [('opencv-python', '4.11.0.86')], f'Conflicting OpenCV distributions installed: {cv2_packages}'; print('JetPack 7 runtime imports OK:', cv2.__version__, torch.__version__, trt.__version__, onnxruntime.__version__)" \
+    && rm /tmp/nvidia-pytorch-version
+
+
+ENV MODEL=/app/model/reaktrailai-yolo26m-seg.pt
+
+COPY RELEASE ./
+COPY src ./src
+COPY model ./model
+COPY tools/runtime_diagnostics.py ./tools/runtime_diagnostics.py
+COPY docker/entrypoint.sh /usr/local/bin/reaktrailai-entrypoint
+COPY docker/mediamtx-webrtc.yml /etc/mediamtx.yml
+COPY --from=mediamtx /mediamtx /usr/local/bin/mediamtx
+
+RUN chmod +x /usr/local/bin/reaktrailai-entrypoint \
+    && mkdir -p /models/exports /data
+
+EXPOSE 5000 8889 8189/udp
+VOLUME ["/models/exports"]
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/reaktrailai-entrypoint"]

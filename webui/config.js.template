@@ -1,0 +1,9 @@
+window.RAIL_AI_CONFIG = {
+  host: "${WEBUI_AI_HOST}",
+  apiPort: Number("${WEBUI_AI_API_PORT}"),
+  whepPort: Number("${WEBUI_AI_WHEP_PORT}"),
+  apiScheme: "${WEBUI_AI_API_SCHEME}",
+  whepScheme: "${WEBUI_AI_WHEP_SCHEME}",
+  statusIntervalMs: Number("${WEBUI_STATUS_INTERVAL_MS}"),
+  debug: "${WEBUI_DEBUG}"
+};

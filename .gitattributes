@@ -1,0 +1,3 @@
+# Das mitgelieferte Modell ist eine Binärdatei und darf nicht als Textdiff
+# behandelt oder durch Zeilenenden-Konvertierung verändert werden.
+*.pt binary

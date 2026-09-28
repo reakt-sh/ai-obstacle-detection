@@ -1,0 +1,66 @@
+FROM bluenviron/mediamtx:1.19.1 AS mediamtx
+#Tested on Ubuntu 26.04 Kernel 6.17.0-41-generic on rx 9070xt
+FROM rocm/pytorch:rocm7.1.1_ubuntu24.04_py3.12_pytorch_release_2.10.0
+
+ARG RAIL_AI_RELEASE=2026-09-13-github-jetson-release
+
+LABEL org.opencontainers.image.title="ReaktRailAi - ROCm" \
+      org.opencontainers.image.version="${RAIL_AI_RELEASE}" \
+      org.opencontainers.image.description="ReaktRailAi runtime for AMD GPUs with ROCm"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    YOLO_AUTOINSTALL=false \
+    PYTHONPATH=/app/src \
+    RAIL_AI_PLATFORM=amd \
+    RAIL_AI_RELEASE=${RAIL_AI_RELEASE} \
+    MODEL=/app/model/reaktrailai-yolo26m-seg.pt \
+    EXPORT_DIR=/models/exports
+
+WORKDIR /app
+
+RUN test "$(dpkg --print-architecture)" = "amd64" \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        ffmpeg \
+        gstreamer1.0-libav \
+        gstreamer1.0-plugins-bad \
+        gstreamer1.0-plugins-base \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-ugly \
+        gstreamer1.0-tools \
+        half \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+        mesa-va-drivers \
+        migraphx \
+        tini \
+        vainfo \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements/runtime.txt /tmp/requirements-runtime.txt
+RUN PIP_CONSTRAINT= python3 -m pip install --no-cache-dir -r /tmp/requirements-runtime.txt \
+    && PIP_CONSTRAINT= python3 -m pip install --no-cache-dir \
+        "onnxruntime-migraphx==1.23.2" \
+    && python3 -c "import cv2, onnxruntime, torch, ultralytics; assert torch.__version__.startswith('2.10.0+rocm7.1'), torch.__version__; print('ROCm runtime imports OK:', cv2.__version__, torch.__version__)"
+
+COPY RELEASE ./
+COPY src ./src
+COPY model ./model
+COPY tools/runtime_diagnostics.py ./tools/runtime_diagnostics.py
+COPY docker/entrypoint.sh /usr/local/bin/reaktrailai-entrypoint
+COPY docker/mediamtx-webrtc.yml /etc/mediamtx.yml
+COPY --from=mediamtx /mediamtx /usr/local/bin/mediamtx
+
+RUN chmod +x /usr/local/bin/reaktrailai-entrypoint \
+    && mkdir -p /models/exports /data
+
+EXPOSE 5000 8889 8189/udp
+VOLUME ["/models/exports"]
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/reaktrailai-entrypoint"]

@@ -1,0 +1,157 @@
+name: reaktrailai
+
+x-ai-environment: &ai-environment
+  INPUT_PROTOCOL: rtsp
+  INPUT_URL: ${CAMERA_RTSP_URL:-rtsp://camera.example:8554/input}
+  INPUT_DECODER: ${INPUT_DECODER:-auto}
+  VAAPI_DEVICE: ${VAAPI_DEVICE:-auto}
+  DEVICE_FALLBACK: ${DEVICE_FALLBACK:-cpu}
+  MODEL_FORMAT: ${MODEL_FORMAT:-pytorch}
+  MODEL_PRECISION: ${MODEL_PRECISION:-fp32}
+  MODEL: ${MODEL:-/app/model/reaktrailai-yolo26m-seg.pt}
+  EXPORT_DIR: ${EXPORT_DIR:-/models/exports}
+  IMGSZ: ${IMGSZ:-640}
+  RAIL_CONFIDENCE: ${RAIL_CONFIDENCE:-0.25}
+  OBJECT_CONFIDENCE: ${OBJECT_CONFIDENCE:-0.15}
+  OBJECT_HOLD_SECONDS: ${OBJECT_HOLD_SECONDS:-1.0}
+  WEBRTC_ENABLED: ${WEBRTC_ENABLED:-1}
+  WEBRTC_ENCODER: ${WEBRTC_ENCODER:-auto}
+  WEBRTC_RTP_URL: rtp://127.0.0.1:5004?pkt_size=1200
+  OUTPUT_FPS: ${OUTPUT_FPS:-25}
+  H264_BITRATE_KBPS: ${H264_BITRATE_KBPS:-30000}
+  RTP_BUFFER_BYTES: ${RTP_BUFFER_BYTES:-4194304}
+  API_ENABLED: ${API_ENABLED:-1}
+  API_HOST: ${API_HOST:-0.0.0.0}
+  API_PORT: ${API_PORT:-5000}
+  TRT_WORKSPACE: ${TRT_WORKSPACE:-4}
+  INT8_DATA: ${INT8_DATA:-/calibration/data.yaml}
+  INT8_CALIBRATION_SAMPLES: ${INT8_CALIBRATION_SAMPLES:-256}
+  LATENCY_CSV: ${LATENCY_CSV:-}
+  STATUS_JSON: ${STATUS_JSON:-}
+  MAX_FRAMES: ${MAX_FRAMES:-0}
+  RECORD_DIR: ${RECORD_DIR:-}
+  RECORD_ANNOTATED: ${RECORD_ANNOTATED:-0}
+  DEBUG_DISPLAY: ${DEBUG_DISPLAY:-0}
+
+x-ai-common: &ai-common
+  restart: ${RESTART_POLICY:-unless-stopped}
+  network_mode: host
+  ipc: host
+  volumes:
+    - reaktrailai-model-cache:/models/exports
+    - type: bind
+      source: ${MODEL_PATH:-./model/reaktrailai-yolo26m-seg.pt}
+      target: /app/model/reaktrailai-yolo26m-seg.pt
+      read_only: true
+      bind:
+        create_host_path: false
+    - ${INT8_CALIBRATION_PATH:-.}:/calibration:ro
+    - ${RESULTS_PATH:-./results}:/results
+  healthcheck:
+    test: ["CMD", "sh", "-c", "curl --fail http://127.0.0.1:$${API_PORT:-5000}/health/ready"]
+    interval: 15s
+    timeout: 5s
+    start_period: 60s
+    retries: 12
+
+services:
+  ai-rocm:
+    <<: *ai-common
+    profiles: [rocm]
+    image: reaktrailai:rocm
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.rocm
+    environment:
+      <<: *ai-environment
+      RAIL_AI_PLATFORM: amd
+      DEVICE: ${DEVICE:-rocm:0}
+      # MIGraphX can generate an invalid fused-reduce kernel for RDNA4/gfx1201.
+      MIGRAPHX_DISABLE_REDUCE_FUSION: ${MIGRAPHX_DISABLE_REDUCE_FUSION:-1}
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+      - render
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+
+  ai-cuda:
+    <<: *ai-common
+    profiles: [cuda]
+    image: reaktrailai:cuda
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cuda
+    environment:
+      <<: *ai-environment
+      RAIL_AI_PLATFORM: rtx
+      DEVICE: ${DEVICE:-cuda:0}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,video
+    gpus: all
+
+  ai-jetpack5:
+    <<: *ai-common
+    profiles: [jetpack5]
+    image: reaktrailai:jetpack5
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.jetpack5
+    runtime: nvidia
+    environment:
+      <<: *ai-environment
+      RAIL_AI_PLATFORM: jetson
+      DEVICE: ${DEVICE:-cuda:0}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+
+  ai-jetpack6:
+    <<: *ai-common
+    profiles: [jetpack6]
+    image: reaktrailai:jetpack6
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.jetpack6
+    runtime: nvidia
+    environment:
+      <<: *ai-environment
+      RAIL_AI_PLATFORM: jetson
+      DEVICE: ${DEVICE:-cuda:0}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+
+  ai-jetpack7:
+    <<: *ai-common
+    profiles: [jetpack7]
+    image: reaktrailai:jetpack7
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.jetpack7
+    runtime: nvidia
+    environment:
+      <<: *ai-environment
+      RAIL_AI_PLATFORM: jetson
+      DEVICE: ${DEVICE:-cuda:0}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+
+  webui:
+    image: reaktrailai:webui
+    build:
+      context: .
+      dockerfile: webui/Dockerfile
+    restart: ${RESTART_POLICY:-unless-stopped}
+    network_mode: host
+    environment:
+      WEBUI_AI_HOST: ${WEBUI_AI_HOST:-}
+      WEBUI_AI_API_PORT: ${API_PORT:-5000}
+      WEBUI_AI_WHEP_PORT: 8889
+      WEBUI_STATUS_INTERVAL_MS: ${WEBUI_STATUS_INTERVAL_MS:-1000}
+      WEBUI_DEBUG: ${WEBUI_DEBUG:-0}
+
+volumes:
+  reaktrailai-model-cache:

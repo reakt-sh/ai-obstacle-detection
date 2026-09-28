@@ -1,0 +1,15 @@
+# PyTorch, torchvision and the CUDA stack come exclusively from the official
+# NVIDIA Jetson iGPU base image. TensorRT comes from NVIDIA's signed JetPack
+# R39.2 apt repository. Do not add any of them here: generic PyPI wheels can
+# silently replace NVIDIA's Jetson/CUDA-enabled builds.
+Flask>=3.1,<4
+numpy==1.26.4
+onnx>=1.17,<2
+# Ultralytics requires opencv-python by distribution name. Installing a
+# headless variant alongside it would create two conflicting cv2 providers.
+opencv-python==4.11.0.86
+onnxruntime==1.27.0
+PyYAML>=6,<7
+requests>=2.32,<3
+shapely>=2.0,<3
+ultralytics==8.4.56

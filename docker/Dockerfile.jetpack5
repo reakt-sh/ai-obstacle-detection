@@ -1,0 +1,75 @@
+#Worked but didn't support necessary pytorch features
+FROM bluenviron/mediamtx:1.19.1 AS mediamtx
+FROM nvcr.io/nvidia/l4t-pytorch:r35.2.1-pth2.0-py3
+
+ARG RAIL_AI_RELEASE=2026-09-13-github-jetson-release
+
+LABEL org.opencontainers.image.title="ReaktRailAi - JetPack 5" \
+      org.opencontainers.image.version="${RAIL_AI_RELEASE}" \
+      org.opencontainers.image.description="ReaktRailAi runtime for JetPack 5 / Jetson Linux R35"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    YOLO_AUTOINSTALL=false \
+    PYTHONPATH=/app/src \
+    RAIL_AI_PLATFORM=jetson \
+    RAIL_AI_RELEASE=${RAIL_AI_RELEASE} \
+    MODEL=/app/model/reaktrailai-yolo26m-seg.pt \
+    EXPORT_DIR=/models/exports
+
+WORKDIR /app
+
+RUN test "$(dpkg --print-architecture)" = "arm64" \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        ffmpeg \
+        gstreamer1.0-libav \
+        gstreamer1.0-plugins-bad \
+        gstreamer1.0-plugins-base \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-ugly \
+        gstreamer1.0-tools \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+        libopenblas-dev \
+        python3-pip \
+        python3-libnvinfer \
+        tensorrt \
+        tini \
+    && apt-get purge -y opencv-python \
+    && rm -rf \
+        /usr/local/lib/python3.8/dist-packages/cv2 \
+        /usr/lib/python3.8/dist-packages/cv2 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements/jetpack5.txt /tmp/requirements-jetson.txt
+RUN python3 -m pip install --no-cache-dir --upgrade "pip==24.3.1" \
+    && (PIP_ROOT_USER_ACTION=ignore python3 -m pip uninstall -y \
+        opencv-python \
+        opencv-python-headless \
+        opencv-contrib-python \
+        opencv-contrib-python-headless || true) \
+    && PIP_ROOT_USER_ACTION=ignore python3 -m pip install --no-cache-dir -r /tmp/requirements-jetson.txt \
+    && python3 -c "from importlib.metadata import distributions; packages = {d.metadata['Name'].lower(): d.version for d in distributions() if d.metadata['Name'] and d.metadata['Name'].lower().startswith('opencv-')}; assert packages == {'opencv-python': '4.10.0.84'}, 'Conflicting OpenCV packages: {}'.format(packages)" \
+    && python3 -c "import importlib.util, cv2, torch, torchvision, ultralytics; assert importlib.util.find_spec('tensorrt') is not None; assert cv2.__version__ == '4.10.0'; print('JetPack 5 runtime imports OK:', cv2.__version__)"
+
+COPY RELEASE ./
+COPY src ./src
+COPY model ./model
+COPY tools/runtime_diagnostics.py ./tools/runtime_diagnostics.py
+COPY docker/entrypoint.sh /usr/local/bin/reaktrailai-entrypoint
+COPY docker/mediamtx-webrtc.yml /etc/mediamtx.yml
+COPY --from=mediamtx /mediamtx /usr/local/bin/mediamtx
+
+RUN chmod +x /usr/local/bin/reaktrailai-entrypoint \
+    && mkdir -p /models/exports /data
+
+EXPOSE 5000 8889 8189/udp
+VOLUME ["/models/exports"]
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/reaktrailai-entrypoint"]
