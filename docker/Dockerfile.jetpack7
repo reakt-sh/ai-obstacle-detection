@@ -75,6 +75,7 @@ ENV MODEL=/app/model/reaktrailai-yolo26m-seg.pt
 COPY RELEASE ./
 COPY src ./src
 COPY model ./model
+COPY calib_1_83_alpha_0.json ./
 COPY tools/runtime_diagnostics.py ./tools/runtime_diagnostics.py
 COPY docker/entrypoint.sh /usr/local/bin/reaktrailai-entrypoint
 COPY docker/mediamtx-webrtc.yml /etc/mediamtx.yml

@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import threading
 import time
+import cv2
 from dataclasses import dataclass
 from typing import Any
 
@@ -32,6 +33,12 @@ class LatestFrameBuffer:
         self._latest: FramePacket | None = None
         self._last_consumed_id: int | None = None
         self._stopped = False
+        fs = cv2.FileStorage("calib_1_83_alpha_0.json", cv2.FileStorage_READ)
+        self._cam_mat = fs.getNode("camera_matrix").mat()
+        self._distortion = fs.getNode("dist_coeffs").mat()
+        self._new_cam_mat = fs.getNode("undistorted_camera_matrix").mat()
+        self._roi = None if fs.getNode("roi").empty() else fs.getNode("roi").real()
+        fs.release()
 
     def put(self, packet: FramePacket) -> None:
         with self._condition:
@@ -39,6 +46,12 @@ class LatestFrameBuffer:
                 return
             if self._latest is not None and packet.frame_id <= self._latest.frame_id:
                 return
+            if self._roi is None:
+                packet.frame = cv2.fisheye.undistortImage(packet.frame, K=self._cam_mat, D=self._distortion, Knew=self._new_cam_mat)
+            else:
+                x, y, w, h, = self._roi
+                undist_img = cv2.undistort(packet.frame, self._cam_mat, self._distortion, None, self._new_cam_mat)
+                packet.frame = undist_img[y:y+h, x:x+w]
             self._latest = packet
             self._condition.notify_all()
 
