@@ -9,9 +9,10 @@ from typing import Any
 class CameraUndistorter:
     """Apply an optional OpenCV camera calibration to decoded frames."""
 
-    def __init__(self, path: Path | None, cv2: Any, np: Any) -> None:
+    def __init__(self, path: Path | None, alpha: float, cv2: Any, np: Any) -> None:
         self.cv2 = cv2
         self.np = np
+        self.alpha = alpha
         self._maps: dict[tuple[int, int], tuple[Any, Any]] = {}
         self._camera_matrix: Any = None
         self._distortion_coeffs: Any = None
@@ -91,20 +92,34 @@ class CameraUndistorter:
             matrix[1] *= height / calibration_height
         size = (width, height)
         if self._model == "fisheye":
+            projection = self.cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
+                matrix,
+                self._distortion_coeffs,
+                size,
+                self.np.eye(3),
+                balance=self.alpha,
+            )
             maps = self.cv2.fisheye.initUndistortRectifyMap(
                 matrix,
                 self._distortion_coeffs,
                 self.np.eye(3),
-                matrix,
+                projection,
                 size,
                 self.cv2.CV_32FC1,
             )
         else:
+            projection = self.cv2.getOptimalNewCameraMatrix(
+                matrix,
+                self._distortion_coeffs,
+                size,
+                self.alpha,
+                size,
+            )
             maps = self.cv2.initUndistortRectifyMap(
                 matrix,
                 self._distortion_coeffs,
                 None,
-                matrix,
+                projection[0],
                 size,
                 self.cv2.CV_32FC1,
             )

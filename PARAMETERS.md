@@ -15,6 +15,7 @@ These values configure the stack or map host paths to container paths.
 | `RESTART_POLICY` | `unless-stopped` | Docker restart policy. |
 | `CAMERA_RTSP_URL` | Example URL | Camera RTSP or RTSPS URL. |
 | `CAMERA_CALIBRATION_FILE` | Empty | Optional path inside the container to a camera calibration YAML, normally `/calibration/camera.yaml`. Set `INT8_CALIBRATION_PATH` to the host directory containing the file. Empty disables undistortion. |
+| `CAMERA_UNDISTORTION_ALPHA` | `0.0` | Undistortion crop balance from `0.0` (crop invalid borders) to `1.0` (retain maximum field of view). |
 | `MODEL_PATH` | `./model/reaktrailai-yolo26m-seg.pt` | Host path to the bundled PT source model. Mounted read-only; override it to use another model. |
 | `INT8_CALIBRATION_PATH` | `.` | Host directory containing the INT8 dataset YAML and its images. |
 | `RESULTS_PATH` | `./results` | Host directory for optional status, latency and video files. |
@@ -37,6 +38,7 @@ ports are opened directly on the host because of `network_mode: host`.
 | `INPUT_DECODER` | `--input-decoder` | `auto` | `auto`, `software`, `vaapi`, `cuda`, `nvv4l2`. |
 | `VAAPI_DEVICE` | `--vaapi-device` | `auto` | VAAPI device, for example `/dev/dri/renderD128`, or `auto`. |
 | `CAMERA_CALIBRATION_FILE` | `--camera-calibration-file` | Empty | Optional camera calibration YAML. Supports `equidistant`/fisheye and `plumb_bob`/Brown-Conrady radial-tangential distortion. |
+| `CAMERA_UNDISTORTION_ALPHA` | `--camera-undistortion-alpha` | `0.0` | OpenCV undistortion balance: `0.0` crops the most, `1.0` preserves the most distorted field of view and may leave black borders. |
 | `MAX_FRAMES` | `--max-frames` | `0` | Maximum number of frames; `0` means unlimited. |
 | `DEBUG_DISPLAY` | `--debug-display` / `--no-debug-display` | `0` | Local OpenCV debug window; normally disabled in a headless container. |
 

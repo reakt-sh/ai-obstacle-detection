@@ -90,7 +90,12 @@ class FFmpegReader(threading.Thread):
         self.vaapi_device = vaapi_device
         self.fps = config.output_fps
         self._next_frame_id = 1
-        self.undistorter = CameraUndistorter(config.camera_calibration_file, cv2, np)
+        self.undistorter = CameraUndistorter(
+            config.camera_calibration_file,
+            config.camera_undistortion_alpha,
+            cv2,
+            np,
+        )
 
     def _probe(self) -> tuple[int, int, float]:
         command = [

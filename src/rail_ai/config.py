@@ -92,6 +92,7 @@ class AppConfig:
     export_dir: Path = Path("/models/exports")
     int8_data: Path | None = None
     camera_calibration_file: Path | None = None
+    camera_undistortion_alpha: float = 0.0
     imgsz: int = 640
     webrtc_enabled: bool = True
     webrtc_rtp_url: str = "rtp://127.0.0.1:5004?pkt_size=1200"
@@ -157,6 +158,8 @@ class AppConfig:
             raise ValueError("OBJECT_CONFIDENCE must be in the range 0.0..1.0")
         if not 0.0 <= self.object_hold_seconds <= 60.0:
             raise ValueError("OBJECT_HOLD_SECONDS must be in the range 0.0..60.0")
+        if not 0.0 <= self.camera_undistortion_alpha <= 1.0:
+            raise ValueError("CAMERA_UNDISTORTION_ALPHA must be in the range 0.0..1.0")
         if self.output_fps <= 0:
             raise ValueError("OUTPUT_FPS must be > 0")
         if self.h264_bitrate_kbps <= 0:
@@ -237,6 +240,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--camera-calibration-file",
         type=Path,
         default=Path(os.environ["CAMERA_CALIBRATION_FILE"]) if os.getenv("CAMERA_CALIBRATION_FILE") else None,
+    )
+    parser.add_argument(
+        "--camera-undistortion-alpha",
+        type=float,
+        default=env_float("CAMERA_UNDISTORTION_ALPHA", 0.0),
     )
     parser.add_argument("--imgsz", type=int, default=env_int("IMGSZ", 640))
     parser.add_argument("--webrtc", dest="webrtc_enabled", action=BooleanOptionalAction, default=env_bool("WEBRTC_ENABLED", True))

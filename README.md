@@ -123,6 +123,7 @@ The main settings are:
 ```dotenv
 CAMERA_RTSP_URL=rtsp://camera.example:8554/input
 CAMERA_CALIBRATION_FILE=/calibration/camera.yaml
+CAMERA_UNDISTORTION_ALPHA=0.0
 MODEL_PATH=./model/reaktrailai-yolo26m-seg.pt
 COMPOSE_PROFILES=cuda
 MODEL_FORMAT=tensorrt
@@ -138,6 +139,9 @@ Kalibr/OpenCV-compatible YAML containing `intrinsics`, `distortion_coeffs`,
 `equidistant`/fisheye and `plumb_bob`/Brown-Conrady radial-tangential models.
 Set `INT8_CALIBRATION_PATH` to the host directory containing the file. If it
 is empty, frames are passed through without calibration.
+`CAMERA_UNDISTORTION_ALPHA` controls the crop balance: `0.0` removes as much
+invalid border as possible, while `1.0` keeps the maximum field of view and
+may leave black borders.
 
 ## Labeling tool
 
