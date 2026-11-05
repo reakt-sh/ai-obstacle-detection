@@ -14,7 +14,7 @@ These values configure the stack or map host paths to container paths.
 | `COMPOSE_PROFILES` | – | Exactly one of `cuda`, `rocm`, `jetpack5`, `jetpack6`, `jetpack7`. |
 | `RESTART_POLICY` | `unless-stopped` | Docker restart policy. |
 | `CAMERA_RTSP_URL` | Example URL | Camera RTSP or RTSPS URL. |
-| `CAMERA_CALIBRATION_FILE` | Empty | Optional host path to a camera calibration YAML. Empty disables undistortion. |
+| `CAMERA_CALIBRATION_FILE` | Empty | Optional path inside the container to a camera calibration YAML, normally `/calibration/camera.yaml`. Set `INT8_CALIBRATION_PATH` to the host directory containing the file. Empty disables undistortion. |
 | `MODEL_PATH` | `./model/reaktrailai-yolo26m-seg.pt` | Host path to the bundled PT source model. Mounted read-only; override it to use another model. |
 | `INT8_CALIBRATION_PATH` | `.` | Host directory containing the INT8 dataset YAML and its images. |
 | `RESULTS_PATH` | `./results` | Host directory for optional status, latency and video files. |

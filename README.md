@@ -122,7 +122,7 @@ The main settings are:
 
 ```dotenv
 CAMERA_RTSP_URL=rtsp://camera.example:8554/input
-CAMERA_CALIBRATION_FILE=
+CAMERA_CALIBRATION_FILE=/calibration/camera.yaml
 MODEL_PATH=./model/reaktrailai-yolo26m-seg.pt
 COMPOSE_PROFILES=cuda
 MODEL_FORMAT=tensorrt
@@ -132,11 +132,12 @@ RAIL_CONFIDENCE=0.25
 OBJECT_HOLD_SECONDS=1.0
 ```
 
-`CAMERA_CALIBRATION_FILE` is optional. Set it to the host path of a
+`CAMERA_CALIBRATION_FILE` is optional. Set it to the container path of a
 Kalibr/OpenCV-compatible YAML containing `intrinsics`, `distortion_coeffs`,
 `distortion_model`, and optionally `resolution`. The runtime supports
 `equidistant`/fisheye and `plumb_bob`/Brown-Conrady radial-tangential models.
-If it is empty, frames are passed through without calibration.
+Set `INT8_CALIBRATION_PATH` to the host directory containing the file. If it
+is empty, frames are passed through without calibration.
 
 ## Labeling tool
 
