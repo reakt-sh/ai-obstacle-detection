@@ -91,6 +91,7 @@ class AppConfig:
     model: Path = Path("model/reaktrailai-yolo26m-seg.pt")
     export_dir: Path = Path("/models/exports")
     int8_data: Path | None = None
+    camera_calibration_file: Path | None = None
     imgsz: int = 640
     webrtc_enabled: bool = True
     webrtc_rtp_url: str = "rtp://127.0.0.1:5004?pkt_size=1200"
@@ -125,6 +126,8 @@ class AppConfig:
         self.export_dir = Path(self.export_dir)
         if self.int8_data is not None:
             self.int8_data = Path(self.int8_data)
+        if self.camera_calibration_file is not None:
+            self.camera_calibration_file = Path(self.camera_calibration_file)
 
         if not self.input_url:
             raise ValueError("INPUT_URL is required")
@@ -230,6 +233,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--export-dir", type=Path, default=Path(os.getenv("EXPORT_DIR", "/models/exports")))
     parser.add_argument("--int8-data", type=Path, default=Path(os.environ["INT8_DATA"]) if os.getenv("INT8_DATA") else None)
+    parser.add_argument(
+        "--camera-calibration-file",
+        type=Path,
+        default=Path(os.environ["CAMERA_CALIBRATION_FILE"]) if os.getenv("CAMERA_CALIBRATION_FILE") else None,
+    )
     parser.add_argument("--imgsz", type=int, default=env_int("IMGSZ", 640))
     parser.add_argument("--webrtc", dest="webrtc_enabled", action=BooleanOptionalAction, default=env_bool("WEBRTC_ENABLED", True))
     parser.add_argument("--webrtc-rtp-url", default=os.getenv("WEBRTC_RTP_URL", "rtp://127.0.0.1:5004?pkt_size=1200"))

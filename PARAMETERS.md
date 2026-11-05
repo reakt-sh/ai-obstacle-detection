@@ -14,6 +14,7 @@ These values configure the stack or map host paths to container paths.
 | `COMPOSE_PROFILES` | – | Exactly one of `cuda`, `rocm`, `jetpack5`, `jetpack6`, `jetpack7`. |
 | `RESTART_POLICY` | `unless-stopped` | Docker restart policy. |
 | `CAMERA_RTSP_URL` | Example URL | Camera RTSP or RTSPS URL. |
+| `CAMERA_CALIBRATION_FILE` | Empty | Optional host path to a camera calibration YAML. Empty disables undistortion. |
 | `MODEL_PATH` | `./model/reaktrailai-yolo26m-seg.pt` | Host path to the bundled PT source model. Mounted read-only; override it to use another model. |
 | `INT8_CALIBRATION_PATH` | `.` | Host directory containing the INT8 dataset YAML and its images. |
 | `RESULTS_PATH` | `./results` | Host directory for optional status, latency and video files. |
@@ -35,6 +36,7 @@ ports are opened directly on the host because of `network_mode: host`.
 | `DEVICE_FALLBACK` | `--device-fallback` | `cpu` | Currently only `cpu`. Used when the GPU is unavailable. |
 | `INPUT_DECODER` | `--input-decoder` | `auto` | `auto`, `software`, `vaapi`, `cuda`, `nvv4l2`. |
 | `VAAPI_DEVICE` | `--vaapi-device` | `auto` | VAAPI device, for example `/dev/dri/renderD128`, or `auto`. |
+| `CAMERA_CALIBRATION_FILE` | `--camera-calibration-file` | Empty | Optional camera calibration YAML. Supports `equidistant`/fisheye and `plumb_bob`/Brown-Conrady radial-tangential distortion. |
 | `MAX_FRAMES` | `--max-frames` | `0` | Maximum number of frames; `0` means unlimited. |
 | `DEBUG_DISPLAY` | `--debug-display` / `--no-debug-display` | `0` | Local OpenCV debug window; normally disabled in a headless container. |
 

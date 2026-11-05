@@ -10,6 +10,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from .calibration import CameraUndistorter
+
 
 def now_ns() -> int:
     return time.perf_counter_ns()
@@ -88,6 +90,7 @@ class FFmpegReader(threading.Thread):
         self.vaapi_device = vaapi_device
         self.fps = config.output_fps
         self._next_frame_id = 1
+        self.undistorter = CameraUndistorter(config.camera_calibration_file, cv2, np)
 
     def _probe(self) -> tuple[int, int, float]:
         command = [
@@ -229,6 +232,7 @@ class FFmpegReader(threading.Thread):
                 self.error = ""
                 received = now_ns()
                 frame = self.np.frombuffer(payload, dtype=self.np.uint8).reshape((height, width, 3)).copy()
+                frame = self.undistorter.apply(frame)
                 self.buffer.put(FramePacket(frame_id, frame, None, received, None))
         finally:
             if process.poll() is None:
